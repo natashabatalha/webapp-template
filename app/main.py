@@ -1,21 +1,39 @@
 import tornado.ioloop
 import tornado.web
 import os
+import tornado.escape
+import tornado.httpserver
+import tornado.options
+import tornado.web
+from tornado.options import define, options
 
-#import cds 
 
-def make_app():
+define("port", default=9999, help="run on the given port", type=int)
+define("debug", default=True, help="automatically detect code changes in development")
+define("workers", default=4, help="maximum number of simultaneous async tasks")
+
+class Application(tornado.web.Application):
+    """Gobal settings of the server
+    This defines the global settings of the server. This parses out the
+    handlers, and includes settings for if ever we want to tie this to a
+    database.
     """
-    Here we have a one Handler for every action you want in your webapp. 
-    Sometimes you can think of these as each individual webpage you are building (e.g. Dashboard), 
-    other times these are "actions" of your website like the FormHandler. 
-    """
-    return tornado.web.Application([
+    def __init__(self):
+        handlers = [
         (r"/", MainHandler), #main website always called "index.html" 
         (r"/submit", FormHandler), #this is going to handle bundling our user's form input and trigger something on submit
         (r"/dashboard", DashboardHandler), #this is going to be our dumping ground for a users calculation
-        (r"/result", ResultHandler),#this will be our results page 
-    ], debug=True, autoreload=True)#as you edit this page your website will update automatically if this is set to True and True
+        (r"/result", ResultHandler)
+        ]
+        settings = dict(
+            blog_title="cds",
+            template_path=os.path.join(os.path.dirname(__file__), "templates"),
+            static_path=os.path.join(os.path.dirname(__file__), "static"),
+            xsrf_cookies=True,
+            cookie_secret="__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__",
+        )
+        super(Application, self).__init__(handlers, **settings)
+
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -53,11 +71,48 @@ class ResultHandler(tornado.web.RequestHandler):
         except (ValueError, TypeError):
             self.write("Invalid input. Please enter valid numbers.")
 
+def main():
+    tornado.options.parse_command_line()
+    BaseHandler.executor = ProcessPoolExecutor(max_workers=options.workers)
+    http_server = tornado.httpserver.HTTPServer(Application())
+    http_server.listen(options.port)
+    tornado.ioloop.IOLoop.current().start()
 
 
 if __name__ == "__main__":
-    app = make_app()
-    port = 9999
-    app.listen(port)
-    print(f"Server started on http://localhost:{port}")
-    tornado.ioloop.IOLoop.current().start()
+    main()
+
+
+
+class BaseHandler(tornado.web.RequestHandler):
+    """
+    Logic to handle user information and database access might go here.
+    """
+    executor = ProcessPoolExecutor(max_workers=16)
+    buffer = OrderedDict()
+
+    def _get_task_response(self, id):
+        """
+        Simple function to grab a calculation that's stored in the buffer,
+        and return a dictionary/json-like response to the front-end.
+        """
+        calc_task = self.buffer.get(id)
+        task = calc_task.task
+
+        response = {'id': id,
+                    'name': calc_task.name,
+                    'count': calc_task.count}
+
+        if task.running():
+            response['state'] = 'running'
+            response['code'] = 202
+        elif task.done():
+            response['state'] = 'finished'
+        elif task.cancelled():
+            response['state'] = 'cancelled'
+        else:
+            response['state'] = 'pending'
+
+        response['html'] = tornado.escape.to_basestring(
+            self.render_string("calc_row.html", response=response))
+        return response
