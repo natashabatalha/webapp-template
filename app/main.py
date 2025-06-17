@@ -2,6 +2,8 @@ import tornado.ioloop
 import tornado.web
 import os
 
+#import cds 
+
 def make_app():
     """
     Here we have a one Handler for every action you want in your webapp. 
@@ -17,7 +19,8 @@ def make_app():
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        self.render("templates/index.html") # when we end with a "render" function it will display the website you want
+        design_options = ['a','b','c']#cds.list_all_designs()
+        self.render("templates/index.html",design_options=design_options) # when we end with a "render" function it will display the website you want
 
 class FormHandler(tornado.web.RequestHandler):
     # there are two types of functions "get" and "post" -- as you might guess "get" is getting or displaying info. 
@@ -42,6 +45,8 @@ class ResultHandler(tornado.web.RequestHandler):
             num2 = float(self.get_argument("number2"))
             # here is our calculation being done 
             total = num1 + num2
+            # add cds calculation 
+
             # result will render with the information 
             # 
             self.render("templates/result.html", total=total)
