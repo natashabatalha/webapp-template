@@ -1,6 +1,7 @@
 import tornado.ioloop
 import tornado.web
 import os
+import viz
 
 #import cds 
 
