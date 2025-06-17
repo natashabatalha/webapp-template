@@ -40,6 +40,7 @@ class ResultHandler(tornado.web.RequestHandler):
 
 if __name__ == "__main__":
     app = make_app()
-    app.listen(9999)
-    print("Server started on http://localhost:9999")
+    port = 9999
+    app.listen(port)
+    print(f"Server started on http://localhost:{port}")
     tornado.ioloop.IOLoop.current().start()
