@@ -1,0 +1,18 @@
+<tr class="response" id="m{{ response['id'] }}">
+    <td>{{ response['count'] }}</td>
+    <td>{{ response['name'] }}</td>
+    <td>
+    {% if response['state'] == 'running' %}<span class="bi bi-arrow-clockwise"></span> Running
+    {% elif response['state'] == 'cancelled' %}<span class="bi bi-x-circle"></span> Cancelled
+    {% elif response['state'] == 'finished' %}<span class="bi bi-check-circle"></span> Finished
+    {% else %}<span class="glyphicon glyphicon-record"> Pending</span>
+    {% end %}
+    </td>
+    <td>
+      <div class="btn-group" role="group" aria-label="...">
+        <a class="btn btn-default" href="/calculation/new/{{ response['id'] }}" role="button" {% if response['state'] != 'finished' %}disabled{% end %}><span class="bi bi-pencil-square"></span></a>
+        <a class="btn btn-default" href="/calculation/view/{{ response['id'] }}" role="button" {% if response['state'] != 'finished' %}disabled{% end %}><span
+                  class="bi bi-eye-fill"></span></a>
+        </div>
+    </td>
+</tr>
