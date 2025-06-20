@@ -30,6 +30,72 @@
         </tbody>
         {% end %}
     </table>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const pollingInterval = 3000; // 3 seconds
+
+    function pollStatus(taskId) {
+        fetch(`/calculation/status/${taskId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.html) {
+                    const rowElement = document.getElementById(`m${taskId}`);
+                    if (rowElement) {
+                        // Replace the entire row with the new HTML
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = data.html.trim();
+
+                        if (tempDiv.firstChild && tempDiv.firstChild.tagName === 'TR') {
+                           const newRowContent = tempDiv.firstChild;
+                           // newRowContent.id = `m${taskId}`; // The server-provided HTML should have the id
+                           rowElement.parentNode.replaceChild(newRowContent, rowElement);
+                        } else {
+                            // Fallback if data.html is not a full <tr>.
+                            rowElement.innerHTML = data.html;
+                        }
+                    }
+                }
+
+                // Check the new status from the DOM, as data.state might not be in the JSON or might be old
+                const updatedRowElement = document.getElementById(`m${taskId}`);
+                let taskStillRunning = false;
+                if (updatedRowElement) {
+                    const statusCell = updatedRowElement.querySelector('td:nth-child(3)'); // Status is the 3rd cell
+                    if (statusCell && statusCell.textContent.includes('Running')) {
+                        taskStillRunning = true;
+                    }
+                }
+
+                if (taskStillRunning) {
+                    setTimeout(() => pollStatus(taskId), pollingInterval);
+                }
+                // If taskStillRunning is false, polling stops for this task.
+            })
+            .catch(error => {
+                console.error('Error polling status for task ' + taskId + ':', error);
+                // Optionally, stop polling on error or implement retry logic
+                // For now, we'll stop polling for this task on error to prevent infinite loops
+            });
+    }
+
+    const table = document.getElementById('calculation-table');
+    if (table) {
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const rowId = row.id;
+            // Ensure rowId starts with 'm' and has a status cell
+            if (rowId && rowId.startsWith('m')) {
+                const statusCell = row.querySelector('td:nth-child(3)'); // Status is the 3rd cell
+                if (statusCell && statusCell.textContent.includes('Running')) {
+                    const taskId = rowId.substring(1); // Remove 'm' prefix
+                    pollStatus(taskId);
+                }
+            }
+        });
+    }
+});
+</script>
 </body>
 
 </html>
