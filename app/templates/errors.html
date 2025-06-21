@@ -1,1 +1,8 @@
-bad
+{% extends "base.html" %}
+
+{% block title %}Error{% end %}
+
+{% block body_content %}
+<h1>Error</h1>
+<p>{{ handler.get_error_html() }}</p>
+{% end %}
